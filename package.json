@@ -1,8 +1,8 @@
 {
-  "name": "social-api",
+  "name": "social-swing-api",
   "version": "1.0.0",
-  "main": "index.js",
-  "repository": "git@github.com:tiagomatana/social-api.git",
+  "main": "src/server.ts",
+  "repository": "git@github.com:tiagomatana/social-swing-api.git",
   "author": "Tiago Matana <tiago.matana@gmail.com>",
   "license": "MIT",
   "scripts": {
