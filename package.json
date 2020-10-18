@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "ts-node-dev --transpile-only --ignore-watch node_modules src/server.ts",
     "typeorm": "ts-node-dev ./node_modules/typeorm/cli.js",
-    "start": "ts-node src/server.ts"
+    "start": "tsc && node src/server.js"
   },
   "dependencies": {
     "bcrypt": "^5.0.0",
@@ -27,7 +27,6 @@
     "multer": "^1.4.2",
     "nodemailer": "^6.4.14",
     "pg": "^8.4.1",
-    "sqlite3": "^5.0.0",
     "typeorm": "^0.2.28",
     "yup": "^0.29.3"
   },
