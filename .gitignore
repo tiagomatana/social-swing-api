@@ -5,3 +5,4 @@ yarn.lock
 yarn-error.log
 src/**/*.js
 package-lock.json
+dist

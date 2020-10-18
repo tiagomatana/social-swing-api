@@ -8,13 +8,13 @@ module.exports = {
     password: process.env.DATABASE_PASSWORD || 'docker',
     synchronize: true,
     migrations: [
-      './src/database/migrations/*.ts'
+        process.env.TYPEORM_MIGRATIONS || './src/database/migrations/*.ts'
     ],
     entities: [
-      './src/models/*.ts'
+        process.env.TYPEORM_ENTITIES || './src/models/*.ts'
     ],
     cli: {
-      migrationsDir: './src/database/migrations',
+      migrationsDir: process.env.TYPEORM_MIGRATIONS_DIR || './src/database/migrations',
       entitiesDir: './src/models'
     }
   }
