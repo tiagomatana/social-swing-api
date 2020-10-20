@@ -1,10 +1,10 @@
 import {Router} from "express";
 import './database/connection'
-import AccountController from "./controllers/AccountController";
+import AccountController from "@controllers/AccountController";
 import multer from "multer";
 import uploadConfig from './config/upload';
 import JWT from "./security/JWT";
-import ResponseInterface from "./interfaces/ResponseInterface";
+
 const prefix = '/api';
 const routes = Router();
 const upload = multer(uploadConfig);

@@ -2,8 +2,6 @@ import {Request, Response} from 'express';
 import {getRepository} from "typeorm";
 import Account from "../models/Account";
 import accounts_view from "../views/accounts_view";
-import * as jwt from 'jsonwebtoken'
-import bcrypt from 'bcrypt';
 import path from 'path';
 import fs from 'fs';
 import * as Yup from 'yup';
@@ -20,7 +18,6 @@ import EmailInterface from "../interfaces/EmailInterface";
 const RECOVERY_PASS_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'html', 'recovery.html')).toString();
 const ACTIVATE_ACCOUNT_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'html', 'activate.html')).toString();
 
-const salt = bcrypt.genSaltSync(10);
 
 export default {
   async index(request: Request, response: Response) {
@@ -66,7 +63,7 @@ export default {
       const account = await accountRepository.findOne({email: data.email});
       if (account) {
         let pass = Math.random().toString(36).slice(-10);
-        account.password = bcrypt.hashSync(pass, salt);
+        account.password = JWT.hashSync(pass);
         await sendRecoveryPass(account, pass);
         await accountRepository.update({email: account.email}, {password: pass});
       }
@@ -109,16 +106,23 @@ export default {
         return response.send(ResponseInterface.notAcceptable('Email invalid!'))
       }
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOne({email: data.email, is_blocked: false, active: true});
+      const account = await accountRepository.findOne({email: data.email});
       if (!account) {
         return response.send(ResponseInterface.unauthorized())
       }
       const {password} = account;
-      let valid = bcrypt.compareSync(data.password, password);
+      let valid = JWT.compareSync(data.password, password);
       if (valid) {
-        let token = jwt.sign({account}, JWT.getSecret(), {
-          expiresIn: 43200 // expires in 12 hours
-        });
+        if (!account.active) {
+          let {code, body} = ResponseInterface.notAcceptable('Accound disabled')
+          return response.status(code).json(body);
+        }
+        if (account.is_blocked) {
+          let {code, body} = ResponseInterface.unauthorized('Accound blocked')
+          return response.status(code).json(body);
+        }
+        let {email} = account
+        let token = JWT.sign(email);
         account.last_login = new Date();
         await accountRepository.update({email: account.email},account);
         let {code, body} = ResponseInterface.success({auth: true, token})
@@ -147,14 +151,14 @@ export default {
       })
 
       await schema.validate(data, {abortEarly: false})
-      data.password = bcrypt.hashSync(data.password, salt);
+      data.password = JWT.hashSync(data.password);
 
       if (EmailValidator(data.email)){
         try {
           const account = accountRepository.create(data)
           await accountRepository.save(account);
           await waitActive(account);
-          let {code, body} = ResponseInterface.success(account)
+          let {code, body} = ResponseInterface.created(account)
           return response.status(code).json(body);
         } catch (e) {
           let {code, body} = ResponseInterface.notFound('email exists!')
@@ -176,9 +180,8 @@ export default {
 
 async function waitActive(account:AccountInterface) {
   try {
-    let token = jwt.sign({account}, JWT.getSecret(), {
-      expiresIn: 43200 // expires in 12 hours
-    });
+    let {email} = account
+    let token = JWT.sign(email);
     const api_url = process.env.API_URL as string || 'localhost';
     let link = `${api_url}/api/validate/` + token;
     const data: EmailInterface = {

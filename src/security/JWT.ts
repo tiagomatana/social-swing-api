@@ -1,10 +1,13 @@
 import {Request, Response, NextFunction} from "express";
 import * as jwt from 'jsonwebtoken';
 import ResponseInterface from "../interfaces/ResponseInterface";
-const secret = process.env.SECRET as string;
+import bcrypt from "bcrypt";
+
+const salt = bcrypt.genSaltSync(10);
 export default {
   async verify(request: Request, response: Response, next: NextFunction) {
     try {
+      let secret = process.env.SECRET as string;
       const token = String(request.headers['x-access-token']);
       if (!token) {
         let result = ResponseInterface.unauthorized();
@@ -23,6 +26,7 @@ export default {
   },
   async getUser(token: string) {
     try {
+      let secret = process.env.SECRET as string;
       const user = await jwt.verify(token, secret);
       return user;
     } catch (e) {
@@ -30,6 +34,21 @@ export default {
     }
   },
   getSecret() {
+    let secret = process.env.SECRET as string;
     return secret;
+  },
+  sign(payload: string) {
+    return jwt.sign({payload}, this.getSecret(), {
+      expiresIn: 43200,
+      algorithm: 'RS256'
+    }, (err, encoded) => {
+      console.log(encoded)
+    })
+  },
+  hashSync(password:string){
+    return bcrypt.hashSync(password, salt);
+  },
+  compareSync(originalPass: string, hashPass: string) {
+    return bcrypt.compareSync(originalPass, hashPass)
   }
 }

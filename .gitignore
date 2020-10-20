@@ -6,3 +6,6 @@ yarn-error.log
 src/**/*.js
 package-lock.json
 dist
+.coverage
+.env
+.env.production
