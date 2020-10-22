@@ -1,4 +1,5 @@
-import {Column, Entity, Index, PrimaryGeneratedColumn} from "typeorm";
+import {Column, Entity, Index, JoinColumn, OneToMany, PrimaryGeneratedColumn} from "typeorm";
+import Image from "./Images";
 
 @Entity('accounts')
 export default class Account {
@@ -15,8 +16,8 @@ export default class Account {
   @Column()
   email: string;
 
-  @Column()
-  birthdate: Date;
+  @Column({type: "date"})
+  birthdate: string;
 
   @Column()
   password: string;
@@ -24,8 +25,8 @@ export default class Account {
   @Column()
   genre: string;
 
-  @Column({default: new Date()})
-  last_login: Date;
+  @Column({type: "timestamp", default: 'CURRENT_TIMESTAMP'})
+  last_login: string;
 
   @Column({default: false})
   active: boolean;
@@ -48,4 +49,9 @@ export default class Account {
   @Column({nullable: true})
   photo: string;
 
+  @OneToMany(() => Image, image => image.account, {
+    cascade: ['insert', "update"]
+  })
+  @JoinColumn({name: "account_id"})
+  images: Image[]
 }

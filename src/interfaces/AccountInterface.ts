@@ -16,4 +16,7 @@ export default interface AccountInterface {
   about?: string
   photo?: string;
 
+
+
+
 }

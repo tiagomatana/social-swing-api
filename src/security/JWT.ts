@@ -20,7 +20,7 @@ export default {
       }
       next()
     } catch (e) {
-      let result = ResponseInterface.unauthorized(e);
+      let result = ResponseInterface.unauthorized();
       response.status(result.code).json(result.body);
     }
   },
@@ -37,8 +37,8 @@ export default {
     let secret = process.env.SECRET as string;
     return secret;
   },
-  sign(payload: string) {
-    return jwt.sign({payload}, this.getSecret(), {
+  async sign(payload: string) {
+    return jwt.sign(payload, this.getSecret(), {
       expiresIn: 43200,
       algorithm: 'RS256'
     }, (err, encoded) => {

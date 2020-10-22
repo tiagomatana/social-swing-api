@@ -21,16 +21,42 @@ const ACTIVATE_ACCOUNT_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'ht
 
 export default {
   async index(request: Request, response: Response) {
+    const {id} = request.params;
     const accountRepository = getRepository(Account);
-    const accounts = await accountRepository.find();
+    const account = await accountRepository.findOneOrFail(id, {
+      relations: ['images']
+    });
+    let {code, body} = ResponseInterface.success(accounts_view.render(account))
 
-    return response.json(accounts_view.renderMany(accounts));
+    return response.status(code).json(body);
   },
   async update(request: Request, response: Response) {
     try {
-      const data: AccountInterface = request.body;
+      const {
+        name,
+        surname,
+        email,
+        birthdate,
+        genre,
+        sex_orientation,
+        relationship,
+        about
+      } = request.body;
+
       const accountRepository = getRepository(Account);
-      const account = accountRepository.create(data)
+
+
+      const account = accountRepository.create({
+        name,
+        surname,
+        email,
+        birthdate,
+        genre,
+        sex_orientation,
+        relationship,
+        about,
+        photo: request.file.filename
+      })
       await accountRepository.update({email: account.email},account);
       let {code, body} = ResponseInterface.success(account);
       return response.status(code).json(body);
@@ -43,7 +69,7 @@ export default {
     try {
       const user = await JWT.getUser(request.params.token) as AccountInterface;
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOne({email: user.email})
+      const account = await accountRepository.findOneOrFail({email: user.email})
       if (account){
         return response.sendFile(path.join(__dirname, '..', 'html', 'email-verified.html'))
       } else {
@@ -60,7 +86,7 @@ export default {
     try {
       const data:AccountInterface = request.body;
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOne({email: data.email});
+      const account = await accountRepository.findOneOrFail({email: data.email});
       if (account) {
         let pass = Math.random().toString(36).slice(-10);
         account.password = JWT.hashSync(pass);
@@ -75,10 +101,10 @@ export default {
   },
   async deleteAccount(request: Request, response: Response) {
     try {
-      const data: AccountInterface = request.body;
+      const {id} = request.body;
       const accountRepository = getRepository(Account);
-      const account = accountRepository.create(data)
-      await accountRepository.delete({email: account.email});
+      const account = accountRepository.create({id})
+      await accountRepository.delete({id: account.id});
       let {code, body } = ResponseInterface.success(account);
       return response.status(code).json(body);
     } catch (e) {
@@ -88,10 +114,10 @@ export default {
   },
   async disable(request: Request, response: Response) {
     try {
-      const data: AccountInterface = request.body;
+      const {id} = request.body;
       const accountRepository = getRepository(Account);
-      const account = accountRepository.create(data)
-      await accountRepository.update({email: account.email}, {active: false});
+      const account = accountRepository.create({id})
+      await accountRepository.update({id: account.id}, {active: false});
       let {code, body} = ResponseInterface.success();
       return response.status(code).json(body);
     } catch (e) {
@@ -101,17 +127,16 @@ export default {
   },
   async login(request: Request, response: Response) {
     try {
-      const data: AccountInterface = request.body;
-      if (!EmailValidator(data.email)){
+      const {email, password} = request.body;
+      if (!EmailValidator(email)){
         return response.send(ResponseInterface.notAcceptable('Email invalid!'))
       }
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOne({email: data.email});
+      const account = await accountRepository.findOne({email});
       if (!account) {
         return response.send(ResponseInterface.unauthorized())
       }
-      const {password} = account;
-      let valid = JWT.compareSync(data.password, password);
+      let valid = JWT.compareSync(password, account.password);
       if (valid) {
         if (!account.active) {
           let {code, body} = ResponseInterface.notAcceptable('Accound disabled')
@@ -123,7 +148,7 @@ export default {
         }
         let {email} = account
         let token = JWT.sign(email);
-        account.last_login = new Date();
+        account.last_login = new Date().toISOString();
         await accountRepository.update({email: account.email},account);
         let {code, body} = ResponseInterface.success({auth: true, token})
         return response.status(code).json(body)
@@ -139,7 +164,15 @@ export default {
   },
   async create(request: Request, response: Response) {
     try {
-      const data: AccountInterface = request.body;
+      const {
+        name,
+        surname,
+        email,
+        birthdate,
+        password,
+        genre
+      } = request.body;
+
       const accountRepository = getRepository(Account);
       const schema = Yup.object().shape({
         name: Yup.string().required(),
@@ -150,12 +183,21 @@ export default {
         genre: Yup.string().required(),
       })
 
+      const data: AccountInterface = request.body;
       await schema.validate(data, {abortEarly: false})
-      data.password = JWT.hashSync(data.password);
 
-      if (EmailValidator(data.email)){
+      const encryptPassword = JWT.hashSync(password);
+
+      if (EmailValidator(email)){
         try {
-          const account = accountRepository.create(data)
+          const account = accountRepository.create({
+            name,
+            surname,
+            email,
+            birthdate,
+            password: encryptPassword,
+            genre
+          })
           await accountRepository.save(account);
           await waitActive(account);
           let {code, body} = ResponseInterface.created(account)
@@ -178,7 +220,7 @@ export default {
   }
 }
 
-async function waitActive(account:AccountInterface) {
+async function waitActive(account:Account) {
   try {
     let {email} = account
     let token = JWT.sign(email);
@@ -196,7 +238,7 @@ async function waitActive(account:AccountInterface) {
   }
 }
 
-async function sendRecoveryPass(account:AccountInterface, pass:string) {
+async function sendRecoveryPass(account:Account, pass:string) {
   try {
     const data: EmailInterface = {
       email: account.email,
@@ -209,3 +251,5 @@ async function sendRecoveryPass(account:AccountInterface, pass:string) {
     Logger.error(e)
   }
 }
+
+

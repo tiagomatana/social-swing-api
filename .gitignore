@@ -7,5 +7,6 @@ src/**/*.js
 package-lock.json
 dist
 .coverage
+.env.local
 .env
 .env.production
