@@ -1,6 +1,7 @@
 import {Request, Response} from 'express';
 import {getRepository} from "typeorm";
 import Account from "../models/Account";
+import del from 'del';
 import accounts_view from "../views/accounts_view";
 import path from 'path';
 import fs from 'fs';
@@ -40,7 +41,9 @@ export default {
       await schema.validate(data, {abortEarly: false});
       const account = accountRepository.create(data)
 
+      const gallery = await imageRepository.query('SELECT * FROM images WHERE account_id = $1', [id]);
       await imageRepository.query('DELETE FROM images WHERE account_id = $1', [id]);
+      await this.deleteImages(gallery)
 
       await accountRepository.update({id}, account);
       let {code ,body} = ResponseInterface.created(account.images);
@@ -52,6 +55,14 @@ export default {
     }
 
   },
+  async deleteImages(images: Image[]) {
+    const api_address = process.env.API_URL as string;
+    let names = images.map(image => {
+      let name = image.path.replace(`${api_address}/uploads/`, '');
+      return path.join(__dirname, '..', '..', 'uploads', name)
+    });
+    await del.sync(names);
+  },
   async remove(request: Request, response: Response) {
     try {
       const {images} = request.body;
@@ -59,8 +70,10 @@ export default {
       const selectedImages = imageRepository.create(images);
       let ids = selectedImages.map(image => {
         return image.id;
-      })
+      });
+
       await imageRepository.query('DELETE FROM images WHERE id in ($1)', [ids])
+      await this.deleteImages(selectedImages);
     } catch (e) {
       let {code , body} = ResponseInterface.internalServerError(e);
       return response.status(code).json(body)

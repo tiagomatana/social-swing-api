@@ -5,6 +5,8 @@ import multer from "multer";
 import uploadConfig from './config/upload';
 import JWT from "./security/JWT";
 import ImageController from "@controllers/ImageController";
+import del from "del";
+import path from "path";
 
 const prefix = '/api';
 const routes = Router();
