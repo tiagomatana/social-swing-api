@@ -25,5 +25,6 @@ routes.post(`${prefix}/recovery-pass`, AccountController.recoveryPass);
 routes.post(`${prefix}/login`, AccountController.login);
 
 routes.post(`${prefix}/gallery`, [JWT.verify, upload.array('images')], ImageController.save);
+routes.patch(`${prefix}/gallery`, [JWT.verify, upload.array('images')], ImageController.remove);
 
 export default routes;
