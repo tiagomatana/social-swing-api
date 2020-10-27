@@ -1,10 +1,11 @@
-import {Column, Entity, Index, JoinColumn, OneToMany, PrimaryGeneratedColumn} from "typeorm";
+import {Column, Entity, Index, ObjectID, ObjectIdColumn} from "typeorm";
 import Image from "./Images";
+import Point from "@models/Point";
 
 @Entity('accounts')
 export default class Account {
-  @PrimaryGeneratedColumn("increment")
-  id: number;
+  @ObjectIdColumn()
+  id: ObjectID;
 
   @Column()
   name: string;
@@ -12,12 +13,12 @@ export default class Account {
   @Column()
   surname: string;
 
-  @Index('email_idx', { unique: true})
+  @Index('email', { unique: true})
   @Column()
   email: string;
 
   @Column({type: "date"})
-  birthdate: string;
+  birthdate: Date;
 
   @Column()
   password: string;
@@ -25,17 +26,17 @@ export default class Account {
   @Column()
   genre: string;
 
-  @Column({type: "timestamp", default: 'CURRENT_TIMESTAMP'})
-  last_login: string;
+  @Column()
+  last_login: Date = new Date();
 
   @Column({default: false})
-  active: boolean;
+  active: boolean = false;
 
   @Column({default: false})
-  is_administrator: boolean;
+  is_administrator: boolean = false;
 
   @Column({default: false})
-  is_blocked: boolean;
+  is_blocked: boolean = false;
 
   @Column({nullable: true})
   sex_orientation: string;
@@ -49,9 +50,14 @@ export default class Account {
   @Column({nullable: true})
   photo: string;
 
-  @OneToMany(() => Image, image => image.account, {
-    cascade: ['insert', "update"]
-  })
-  @JoinColumn({name: "account_id"})
-  images: Image[]
+  @Column(type => Image)
+  images: Image[];
+
+  @Column(type => Point)
+  location: Geolocation
+
+
+  @Column()
+  created: Date = new Date()
+
 }

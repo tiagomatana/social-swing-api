@@ -1,6 +1,7 @@
 import {Request, Response} from 'express';
-import {getRepository} from "typeorm";
+import {getMongoManager, getRepository} from "typeorm";
 import Account from "../models/Account";
+import Image from "../models/Images";
 import accounts_view from "../views/accounts_view";
 import path from 'path';
 import fs from 'fs';
@@ -21,30 +22,50 @@ const ACTIVATE_ACCOUNT_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'ht
 
 export default {
   async index(request: Request, response: Response) {
-    const {id} = request.params;
-    const accountRepository = getRepository(Account);
-    const account = await accountRepository.findOneOrFail(id, {
-      relations: ['images']
-    });
-    let {code, body} = ResponseInterface.success(accounts_view.render(account))
+    let user = await JWT.getUser(request)
+    const mongoManager = getMongoManager();
+    const accountFounds = await mongoManager.aggregate(Account,[
+      {
+        $match: {
+          email: user
+        }
+      },
+      {
+        $lookup: {
+          from: 'images',
+          localField: 'email',
+          foreignField: 'account_email',
+          as: 'images'
+        }
+      }
+    ]).toArray();
+
+    let api_host = await getEnv();
+    let {code, body} = ResponseInterface.success(accounts_view.render(accountFounds[0], api_host))
 
     return response.status(code).json(body);
   },
   async update(request: Request, response: Response) {
     try {
-      const {
-        name,
-        surname,
-        email,
-        birthdate,
-        genre,
-        sex_orientation,
-        relationship,
-        about
-      } = request.body;
+      const {name, surname, email, birthdate, genre, sex_orientation, relationship, about, location} = request.body;
 
       const accountRepository = getRepository(Account);
 
+      const schema = Yup.object().shape({
+        name: Yup.string().required(),
+        surname: Yup.string().required(),
+        email: Yup.string().required(),
+        birthdate: Yup.date().required(),
+        password: Yup.string().required(),
+        genre: Yup.string().required(),
+        sex_orientation: Yup.string().required(),
+        relationship: Yup.string().required(),
+        about: Yup.string().required(),
+        location: Yup.object<Geolocation>().required()
+      })
+
+      const data: AccountInterface = request.body;
+      await schema.validate(data, {abortEarly: false})
 
       const account = accountRepository.create({
         name,
@@ -55,6 +76,7 @@ export default {
         sex_orientation,
         relationship,
         about,
+        location,
         photo: request.file.filename
       })
       await accountRepository.update({email: account.email},account);
@@ -67,10 +89,11 @@ export default {
   },
   async verify(request: Request, response: Response) {
     try {
-      const user = await JWT.getUser(request.params.token) as AccountInterface;
+      const email = await JWT.getUser(request);
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOneOrFail({email: user.email})
+      const account = await accountRepository.findOneOrFail({email})
       if (account){
+        await accountRepository.update({email}, {active: true})
         return response.sendFile(path.join(__dirname, '..', 'html', 'email-verified.html'))
       } else {
         return response.status(200).send('');
@@ -79,7 +102,6 @@ export default {
       let {code, body} = ResponseInterface.internalServerError(e);
       return response.status(code).json(body);
     }
-
 
   },
   async recoveryPass(request: Request, response: Response) {
@@ -91,7 +113,7 @@ export default {
         let pass = Math.random().toString(36).slice(-10);
         account.password = JWT.hashSync(pass);
         await sendRecoveryPass(account, pass);
-        await accountRepository.update({email: account.email}, {password: pass});
+        await accountRepository.update({email: account.email}, {password: account.password});
       }
       let {code, body} = ResponseInterface.success();
       return response.status(code).json(body);
@@ -101,11 +123,15 @@ export default {
   },
   async deleteAccount(request: Request, response: Response) {
     try {
-      const {id} = request.body;
+      const email = await JWT.getUser(request);
       const accountRepository = getRepository(Account);
-      const account = accountRepository.create({id})
-      await accountRepository.delete({id: account.id});
-      let {code, body } = ResponseInterface.success(account);
+
+      const mongoManager = getMongoManager();
+
+      await accountRepository.delete({email: email});
+      await mongoManager.delete(Image, {account_email: email})
+
+      let {code, body } = ResponseInterface.success(true);
       return response.status(code).json(body);
     } catch (e) {
       let {code, body} = ResponseInterface.internalServerError(e);
@@ -148,7 +174,7 @@ export default {
         }
         let {email} = account
         let token = JWT.sign(email);
-        account.last_login = new Date().toISOString();
+        account.last_login = new Date();
         await accountRepository.update({email: account.email},account);
         let {code, body} = ResponseInterface.success({auth: true, token})
         return response.status(code).json(body)
@@ -170,8 +196,14 @@ export default {
         email,
         birthdate,
         password,
-        genre
+        genre,
+          location
       } = request.body;
+
+      if (!is18(new Date(birthdate))) {
+        let {code, body} = ResponseInterface.notAcceptable('only 18 years old.')
+        return response.status(code).json(body)
+      }
 
       const accountRepository = getRepository(Account);
       const schema = Yup.object().shape({
@@ -181,6 +213,7 @@ export default {
         birthdate: Yup.date().required(),
         password: Yup.string().required(),
         genre: Yup.string().required(),
+        location: Yup.object<Geolocation>().required()
       })
 
       const data: AccountInterface = request.body;
@@ -194,9 +227,10 @@ export default {
             name,
             surname,
             email,
-            birthdate,
+            birthdate: new Date(birthdate),
             password: encryptPassword,
-            genre
+            genre,
+            location
           })
           await accountRepository.save(account);
           await waitActive(account);
@@ -229,7 +263,7 @@ async function waitActive(account:Account) {
     const data: EmailInterface = {
       email: account.email,
       subject: '[ATIVAR CONTA]',
-      body: ACTIVATE_ACCOUNT_TEMPLATE.replace(/linkToActivate/, link)
+      body: ACTIVATE_ACCOUNT_TEMPLATE.replace(/linkToActivate/g, link)
     }
     await EmailService.send(data);
     Logger.info(data)
@@ -250,6 +284,22 @@ async function sendRecoveryPass(account:Account, pass:string) {
   } catch (e) {
     Logger.error(e)
   }
+}
+
+function is18(birthdate: Date) {
+  const today = new Date();
+  var years = today.getFullYear() - birthdate.getFullYear();
+  const month = today.getMonth() - birthdate.getMonth();
+
+  if (month < 0 || (month === 0 && today.getDate() < birthdate.getDate())){
+    years--;
+  }
+
+  return years >=18;
+}
+
+async function getEnv() {
+  return await process.env.API_URL as string;
 }
 
 
