@@ -1,16 +1,17 @@
-import {Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn} from "typeorm";
-import Account from "./Account";
+import {Column, Entity, ObjectID, ObjectIdColumn} from "typeorm";
 
 @Entity('images')
 export default class Image {
-  @PrimaryGeneratedColumn('increment')
-  id: number;
+  @ObjectIdColumn()
+  id: ObjectID;
 
   @Column()
   path: string;
 
-  @ManyToOne(() => Account, account => account.images)
-  @JoinColumn({name: 'account_id'})
-  account: Account;
+  @Column()
+  account_email: string;
+
+  @Column()
+  created: Date = new Date();
 
 }

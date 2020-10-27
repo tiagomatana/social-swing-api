@@ -1,9 +1,10 @@
 import Account from "../models/Account";
 import images_view from "@views/images_view";
+import environment from "@config/environment";
 
 export default {
-  render(account: Account) {
-    let api_address = process.env.API_URL as string;
+  render(account: Account, host?: string) {
+
     return {
       id: account.id,
       name: account.name,
@@ -18,13 +19,13 @@ export default {
       sex_orientation: account.sex_orientation,
       relationship: account.relationship,
       about: account.about,
-      photo: `${api_address}/uploads/${account.photo}`,
-      images: images_view.renderMany(account.images)
+      photo: `${host}/uploads/${account.photo}`,
+      images: account.images ? images_view.renderMany(account.images) : []
     }
 
   },
 
-  renderMany(accounts: Account[]) {
+  renderMany(accounts: Account[] = []) {
     return accounts.map(account => this.render(account));
   }
 }

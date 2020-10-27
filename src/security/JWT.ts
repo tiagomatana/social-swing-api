@@ -24,11 +24,12 @@ export default {
       response.status(result.code).json(result.body);
     }
   },
-  async getUser(token: string) {
+  async getUser(request: Request) {
     try {
       let secret = process.env.SECRET as string;
-      const user = await jwt.verify(token, secret);
-      return user;
+      let token = request.header("x-access-token") as string || request.params.token;
+      const user:any = jwt.verify(token, secret);
+      return user.payload;
     } catch (e) {
       return null;
     }
@@ -37,13 +38,12 @@ export default {
     let secret = process.env.SECRET as string;
     return secret;
   },
-  async sign(payload: string) {
-    return jwt.sign(payload, this.getSecret(), {
-      expiresIn: 43200,
-      algorithm: 'RS256'
-    }, (err, encoded) => {
-      console.log(encoded)
+  sign(payload: string) {
+    let secret = this.getSecret();
+    let token = jwt.sign({payload}, secret, {
+      expiresIn: '1d'
     })
+    return token;
   },
   hashSync(password:string){
     return bcrypt.hashSync(password, salt);

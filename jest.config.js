@@ -6,6 +6,7 @@ module.exports = {
     clearMocks: true,
     testEnvironment: 'node',
     collectCoverage: false,
+    lib: ['@shelf/jest-mongodb'],
     collectCoverageFrom: [
         "./src/**/*.ts"
     ],
