@@ -13,8 +13,8 @@
     "typeorm": "tsnd ./node_modules/typeorm/cli.js",
     "start": "node dist/server.js",
     "build": "tsc --project tsconfig.json && tscpaths -p tsconfig.json -s ./src -o ./dist && gulp copy-html",
-    "test": "node_modules/.bin/jest --forceExit --no-cache --collectCoverage",
-    "test:dev": "jest",
+    "test": "jest --forceExit --runInBand --detectOpenHandles --collectCoverage",
+    "test:dev": "jest --runInBand --detectOpenHandles --forceExit",
     "reporter": "jest --json --outputFile=result.json --testLocationInResults --forceExit",
     "test-coverage": "node_modules/.bin/jest --watchAll --runInBand --verbose --coverage"
   },

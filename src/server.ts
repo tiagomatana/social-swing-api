@@ -20,10 +20,11 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.use(errorHandler)
 
-app.listen(PORT || 3000, () => {
+const server = app.listen(PORT || 3000, () => {
   console.info(`[SERVER] Running in port ${PORT || 3000}`)
   let r = listEndpoints(app)
   console.table(r)
 });
 
-
+export {server}
+export default app;

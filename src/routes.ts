@@ -5,6 +5,7 @@ import multer from "multer";
 import uploadConfig from './config/upload';
 import JWT from "./security/JWT";
 import ImageController from "@controllers/ImageController";
+import LocationController from "@controllers/LocationController";
 
 const prefix = '/api';
 const routes = Router();
@@ -26,5 +27,8 @@ routes.post(`${prefix}/login`, AccountController.login);
 
 routes.post(`${prefix}/gallery`, [JWT.verify, upload.array('images')], ImageController.save);
 routes.patch(`${prefix}/gallery`, [JWT.verify], ImageController.remove);
+
+routes.post(`${prefix}/locate`, JWT.verify, LocationController.save);
+routes.get(`${prefix}/locate`, JWT.verify, LocationController.list);
 
 export default routes;

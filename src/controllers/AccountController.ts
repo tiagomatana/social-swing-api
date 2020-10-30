@@ -22,28 +22,33 @@ const ACTIVATE_ACCOUNT_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'ht
 
 export default {
   async index(request: Request, response: Response) {
-    let user = await JWT.getUser(request)
-    const mongoManager = getMongoManager();
-    const accountFounds = await mongoManager.aggregate(Account,[
-      {
-        $match: {
-          email: user
-        }
-      },
-      {
-        $lookup: {
-          from: 'images',
-          localField: 'email',
-          foreignField: 'account_email',
-          as: 'images'
-        }
-      }
-    ]).toArray();
+   try {
+     let user = await JWT.getUser(request)
+     const mongoManager = getMongoManager();
+     const accountFounds = await mongoManager.aggregate(Account,[
+       {
+         $match: {
+           email: user
+         }
+       },
+       {
+         $lookup: {
+           from: 'images',
+           localField: 'email',
+           foreignField: 'account_email',
+           as: 'images'
+         }
+       }
+     ]).toArray();
 
-    let api_host = await getEnv();
-    let {code, body} = ResponseInterface.success(accounts_view.render(accountFounds[0], api_host))
+     let api_host = await getEnv();
+     let {code, body} = ResponseInterface.success(accounts_view.render(accountFounds[0], api_host))
 
-    return response.status(code).json(body);
+     return response.status(code).json(body);
+   } catch (e) {
+     let {code, body} = ResponseInterface.internalServerError(e)
+     return response.status(code).json(body);
+   }
   },
   async update(request: Request, response: Response) {
     try {
@@ -76,7 +81,6 @@ export default {
         sex_orientation,
         relationship,
         about,
-        location,
         photo: request.file.filename
       })
       await accountRepository.update({email: account.email},account);
@@ -229,8 +233,7 @@ export default {
             email,
             birthdate: new Date(birthdate),
             password: encryptPassword,
-            genre,
-            location
+            genre
           })
           await accountRepository.save(account);
           await waitActive(account);

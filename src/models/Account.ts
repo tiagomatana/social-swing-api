@@ -53,10 +53,6 @@ export default class Account {
   @Column(type => Image)
   images: Image[];
 
-  @Column(type => Point)
-  location: Geolocation
-
-
   @Column()
   created: Date = new Date()
 

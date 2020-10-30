@@ -1,6 +1,5 @@
 import Account from "../models/Account";
 import images_view from "@views/images_view";
-import environment from "@config/environment";
 
 export default {
   render(account: Account, host?: string) {
@@ -13,9 +12,7 @@ export default {
       birthdate: account.birthdate,
       genre: account.genre,
       last_login: account.last_login,
-      active: account.active,
       is_administrator: account.is_administrator,
-      is_blocked: account.is_blocked,
       sex_orientation: account.sex_orientation,
       relationship: account.relationship,
       about: account.about,
