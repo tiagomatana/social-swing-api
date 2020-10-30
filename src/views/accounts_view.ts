@@ -16,7 +16,7 @@ export default {
       sex_orientation: account.sex_orientation,
       relationship: account.relationship,
       about: account.about,
-      photo: `${host}/uploads/${account.photo}`,
+      photo: account.photo ? `${host}/uploads/${account.photo}` : '',
       images: account.images ? images_view.renderMany(account.images) : []
     }
 

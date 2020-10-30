@@ -42,9 +42,16 @@ export default {
      ]).toArray();
 
      let api_host = await getEnv();
-     let {code, body} = ResponseInterface.success(accounts_view.render(accountFounds[0], api_host))
+     if (accountFounds.length && accountFounds[0].email) {
+       let {code, body} = ResponseInterface.success(accounts_view.render(accountFounds[0], api_host))
 
-     return response.status(code).json(body);
+       return response.status(code).json(body);
+     } else {
+       let {code, body} = ResponseInterface.notFound()
+
+       return response.status(code).json(body);
+     }
+
    } catch (e) {
      let {code, body} = ResponseInterface.internalServerError(e)
      return response.status(code).json(body);

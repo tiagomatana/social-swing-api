@@ -2,7 +2,7 @@ import {Column, Entity, Index, ObjectID, ObjectIdColumn} from "typeorm";
 import Point from "@models/Point";
 
 @Entity('locations')
-export default class Image {
+export default class Location {
   @ObjectIdColumn()
   id: ObjectID;
 

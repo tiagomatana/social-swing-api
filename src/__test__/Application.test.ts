@@ -1,21 +1,34 @@
 import JWT from "../security/JWT";
-import jwt from 'jsonwebtoken';
-
+import * as typeorm from 'typeorm'
 import app, {server} from '../server'
 import request from 'supertest'
-import {string} from "yup";
+import {getMongoManager, MongoEntityManager} from "typeorm";
+
+const mockedTypeorm = typeorm as jest.Mocked<typeof typeorm>;
+// const mockMongoManager = getMongoManager();
+
 
 describe('Application Test Suite', () => {
 
     beforeAll(() => {
         process.env.SECRET = 'test'
         process.env.PORT = '3000'
+        process.env.API_URL = 'localhost'
         jest.spyOn(console, 'error').mockImplementation();
         jest.spyOn(console, 'log').mockImplementation();
         jest.spyOn(console, 'info').mockImplementation();
-        jest.spyOn(console, 'debug').mockImplementation();
         jest.spyOn(console, 'warn').mockImplementation();
         jest.spyOn(console, 'table').mockImplementation();
+    });
+
+    beforeEach(() => {
+        mockedTypeorm.createConnection = jest.fn().mockImplementation(() => typeorm.Connection);
+        // mockMongoManager.aggregate = jest.fn().mockImplementation(async () => {
+        //     return [{}]
+        // })
+        // jest.spyOn(mockedTypeorm, 'getMongoManager').mockImplementation();
+        // @ts-ignore
+
     })
 
     afterEach(async (done) => {
@@ -52,9 +65,18 @@ describe('Application Test Suite', () => {
 
     test('login', async (done) => {
         const email = 'test@test.com';
+
+        // @ts-ignore
+        jest.spyOn(mockedTypeorm.MongoEntityManager.prototype, 'aggregate').mockReturnValue({toArray: () => {
+                return [{email}]
+            }})
         expect(JWT.getSecret()).toEqual('test');
+
+
         let token = JWT.sign(email)
-        await request(app).get('/api/accounts').set('x-access-token', token).expect(500)
+        await request(app).get('/api/accounts').set('x-access-token', token).expect(200).then(res => {
+            console.debug(res.body)
+        })
         done()
     });
 
