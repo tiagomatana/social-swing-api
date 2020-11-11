@@ -5,17 +5,17 @@ export default {
   render(account: Account, host?: string) {
 
     return {
-      id: account.id,
-      name: account.name,
-      surname: account.surname,
-      email: account.email,
-      birthdate: account.birthdate,
-      genre: account.genre,
-      last_login: account.last_login,
-      is_administrator: account.is_administrator,
-      sex_orientation: account.sex_orientation,
-      relationship: account.relationship,
-      about: account.about,
+      id: account.id || null,
+      name: account.name || null,
+      surname: account.surname || null,
+      email: account.email || null,
+      birthdate: account.birthdate || null,
+      genre: account.genre || null,
+      last_login: account.last_login || null,
+      is_administrator: account.is_administrator || null,
+      sex_orientation: account.sex_orientation || null,
+      relationship: account.relationship || null,
+      about: account.about || null,
       photo: account.photo ? `${host}/uploads/${account.photo}` : '',
       images: account.images ? images_view.renderMany(account.images) : []
     }

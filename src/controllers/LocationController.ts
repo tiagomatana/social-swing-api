@@ -9,80 +9,110 @@ import Image from "@models/Images";
 import * as Yup from "yup";
 import AccountInterface from "../interfaces/AccountInterface";
 import Location from "@models/Location";
+import AccountController from "@controllers/AccountController";
 
 interface LocationInterface {
-  city: string;
-  latitude: number;
-  longitude: number;
+    city: string;
+    miles: number;
+    latitude: number;
+    longitude: number;
 }
 
 export default {
-  async save(request: Request, response: Response) {
-    try {
-      const email = await JWT.getUser(request);
-      const data: LocationInterface = request.body;
+    async save(request: Request, response: Response) {
+        try {
+            const mongoManager = getMongoManager();
 
-      if (data.latitude || data.longitude) {
-        let schema = Yup.object().shape({
-          latitude: Yup.string().required(),
-          longitude: Yup.string().required(),
-          city: Yup.string()
-        });
+            const email = await JWT.getUser(request);
+            const data: LocationInterface = request.body;
 
-        await schema.validate(data, {abortEarly: false});
+            let schema;
+            if (data.latitude || data.longitude) {
+                schema = Yup.object().shape({
+                    latitude: Yup.string().required(),
+                    longitude: Yup.string().required()
+                });
+            } else {
+                schema = Yup.object().shape({
+                    city: Yup.string().required()
+                });
+            }
+            await schema.validate(data, {abortEarly: false});
 
-      } else {
-        let schema = Yup.object().shape({
-          latitude: Yup.string(),
-          longitude: Yup.string(),
-          city: Yup.string().required()
-        });
+            const locationRepository = getRepository(Location);
+            const point = locationRepository.create({
+                account_email: email,
+                point: {
+                    coordinates: [data.latitude, data.longitude] || []
+                }
+            });
 
-        await schema.validate(data, {abortEarly: false});
+            await mongoManager.updateOne(Location, {account_email: email}, point, {upsert: true});
 
-      }
+            let {code, body} = ResponseInterface.created(point);
 
-      const locationRepository = getRepository(Location);
-      const point = locationRepository.create({
-        account_email: email,
-        point: {
-          coordinates: [data.latitude, data.longitude]
-        },
-        city: data.city
-      });
+            return response.status(code).json(body)
+        } catch (e) {
+            let {code, body} = ResponseInterface.internalServerError(e);
+            return response.status(code).json(body)
+        }
 
-      const mongoManager = getMongoManager()
-      await mongoManager.updateOne(Location, {account_email: email}, point, {upsert: true});
+    },
+    async listByMiles(request: Request, response: Response) {
+        try {
+            const {miles} = request.params
+            const mongoManager = getMongoManager();
+            const email = await JWT.getUser(request);
+            const userLocation = await mongoManager.findOne(Location, {account_email: email})
+            if (!userLocation) {
+                return await this.listByCity(request, response);
+            }
+            const users = await mongoManager.aggregate(Location, [
+                {
+                    $match: {
+                        point: { $geoWithin:   { $centerSphere: [ userLocation?.point.coordinates, Number(miles) / 3963.2 ] } }, //111.12
+                        account_email: { $ne: userLocation?.account_email}
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'accounts',
+                        localField: 'account_email',
+                        foreignField: 'email',
+                        as: 'account'
+                    }
+                }
+            ]).toArray();
 
-      let {code ,body} = ResponseInterface.created(point);
+            let {code, body} = ResponseInterface.success(users);
+            return response.status(code).json(body)
+        } catch (e) {
+            let {code, body} = ResponseInterface.internalServerError(e);
+            return response.status(code).json(body)
+        }
+    },
+    async listByCity(request: Request, response: Response) {
+        try {
+            const mongoManager = getMongoManager();
+            const email = await JWT.getUser(request);
+            const account = await AccountController.getLoggedUser(request)
+            const users = await mongoManager.aggregate(Account, [
+                {
+                    $match: {
+                        city: account?.city,
+                        uf: account?.uf,
+                        email: { $ne: email}
+                    }
+                }
+            ]).toArray();
 
-      return response.status(code).json(body)
-    } catch (e) {
-      let {code , body} = ResponseInterface.internalServerError(e);
-      return response.status(code).json(body)
+            let {code, body} = ResponseInterface.success(users);
+            return response.status(code).json(body)
+        } catch (e) {
+            let {code, body} = ResponseInterface.internalServerError(e);
+            return response.status(code).json(body)
+        }
     }
-
-  },
-  async list(request: Request, response: Response) {
-    const {url} = request.body;
-    const image = url.replace(/.+\/uploads\//g, '');
-    if (image){
-      try {
-        const email = await JWT.getUser(request);
-        const imageRepository = getRepository(Image);
-        await imageRepository.delete({account_email: email, path: image});
-        const file = path.join(__dirname, '..', '..', 'uploads', image);
-        await del.sync(file);
-        let {code, body} = ResponseInterface.success(`${image} deleted.`);
-        return response.status(code).json(body)
-      } catch (e) {
-        let {code, body} = ResponseInterface.internalServerError(e);
-        return response.status(code).json(body)
-      }
-    }
-
-  }
-
 
 
 }

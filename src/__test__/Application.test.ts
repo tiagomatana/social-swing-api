@@ -7,10 +7,11 @@ import {getMongoManager, MongoEntityManager} from "typeorm";
 const mockedTypeorm = typeorm as jest.Mocked<typeof typeorm>;
 // const mockMongoManager = getMongoManager();
 
-
+let Mock:any = {}
 describe('Application Test Suite', () => {
 
     beforeAll(() => {
+        mockData();
         process.env.SECRET = 'test'
         process.env.PORT = '3000'
         process.env.API_URL = 'localhost'
@@ -63,7 +64,35 @@ describe('Application Test Suite', () => {
         done()
     });
 
-    test('login', async (done) => {
+    test('AccountController update', async (done) => {
+        const email = 'test@test.com';
+
+        // @ts-ignore
+        jest.spyOn(mockedTypeorm.MongoEntityManager.prototype, 'updateOne').mockReturnValue({toArray: () => {
+                return [{email}]
+            }})
+
+        let token = JWT.sign(email)
+        await request(app).put('/api/accounts').type('form').set('x-access-token', token)
+            .field('name', 'test')
+            .field('surname', 'test')
+            .field('email', email)
+            .field('birthdate', new Date('2000-01-01').toISOString())
+            .field('genre', 'test')
+            .field('sex_orientation', 'test')
+            .field('relationship', 'test')
+            .field('about', 'test')
+            .field('photo', '')
+            .expect(200)
+            .then(res => {
+                console.debug(res.body)
+
+            // expect(res.body).toEqual(Mock.responseRenderAccountIndex)
+        })
+        done()
+    });
+
+    test('AccountController index', async (done) => {
         const email = 'test@test.com';
 
         // @ts-ignore
@@ -74,12 +103,39 @@ describe('Application Test Suite', () => {
 
 
         let token = JWT.sign(email)
-        await request(app).get('/api/accounts').set('x-access-token', token).expect(200).then(res => {
-            console.debug(res.body)
-        })
+        await request(app).get('/api/accounts').set('x-access-token', token)
+            .expect(200)
+            .then(res => {
+
+                expect(res.body).toEqual(Mock.responseRenderAccountIndex)
+            })
         done()
     });
 
-})
+
+
+
+});
+
+function mockData() {
+
+    Mock.responseRenderAccountIndex = {
+        data: {
+            email: 'test@test.com',
+            about: null,
+            birthdate: null,
+            genre: null,
+            id: null,
+            is_administrator: null,
+            last_login: null,
+            name: null,
+            surname: null,
+            sex_orientation: null,
+            relationship: null,
+            photo: '',
+            images: []
+        }
+    }
+}
 
 

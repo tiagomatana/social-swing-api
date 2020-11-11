@@ -1,6 +1,5 @@
 import {Column, Entity, Index, ObjectID, ObjectIdColumn} from "typeorm";
 import Image from "./Images";
-import Point from "@models/Point";
 
 @Entity('accounts')
 export default class Account {
@@ -27,7 +26,7 @@ export default class Account {
   genre: string;
 
   @Column()
-  last_login: Date = new Date();
+  last_login: Date;
 
   @Column({default: false})
   active: boolean = false;
@@ -52,6 +51,12 @@ export default class Account {
 
   @Column(type => Image)
   images: Image[];
+
+  @Column()
+  uf: string = ''
+
+  @Column()
+  city: string = ''
 
   @Column()
   created: Date = new Date()

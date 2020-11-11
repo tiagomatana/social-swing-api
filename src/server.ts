@@ -9,7 +9,7 @@ import listEndpoints from 'express-list-endpoints';
 const {PORT} = process.env;
 
 const app = express();
-connection.create().then();
+connection.create();
 
 
 app.use(cors())

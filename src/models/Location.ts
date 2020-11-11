@@ -1,5 +1,5 @@
 import {Column, Entity, Index, ObjectID, ObjectIdColumn} from "typeorm";
-import Point from "@models/Point";
+import Point from "./Point";
 
 @Entity('locations')
 export default class Location {
@@ -8,9 +8,6 @@ export default class Location {
 
   @Column(type => Point)
   point: Point;
-
-  @Column()
-  city: string
 
   @Index('account_email', { unique: true})
   @Column()

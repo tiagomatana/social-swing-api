@@ -20,11 +20,21 @@ const RECOVERY_PASS_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'html'
 const ACTIVATE_ACCOUNT_TEMPLATE = fs.readFileSync(path.join(__dirname, '..', 'html', 'activate.html')).toString();
 
 
+
 export default {
+  async getLoggedUser(request: Request) {
+    try {
+      const mongoManager = getMongoManager();
+      let email = await JWT.getUser(request);
+      return await mongoManager.findOne(Account, {email})
+    } catch (e) {
+      throw new Error(e);
+    }
+  },
   async index(request: Request, response: Response) {
    try {
-     let user = await JWT.getUser(request)
      const mongoManager = getMongoManager();
+     let user = await JWT.getUser(request);
      const accountFounds = await mongoManager.aggregate(Account,[
        {
          $match: {
@@ -37,6 +47,14 @@ export default {
            localField: 'email',
            foreignField: 'account_email',
            as: 'images'
+         }
+       },
+       {
+         $lookup: {
+           from: 'locations',
+           localField: 'email',
+           foreignField: 'account_email',
+           as: 'location'
          }
        }
      ]).toArray();
@@ -59,26 +77,26 @@ export default {
   },
   async update(request: Request, response: Response) {
     try {
-      const {name, surname, email, birthdate, genre, sex_orientation, relationship, about, location} = request.body;
-
-      const accountRepository = getRepository(Account);
-
+      const mongoManager = getMongoManager();
       const schema = Yup.object().shape({
         name: Yup.string().required(),
         surname: Yup.string().required(),
         email: Yup.string().required(),
         birthdate: Yup.date().required(),
-        password: Yup.string().required(),
         genre: Yup.string().required(),
         sex_orientation: Yup.string().required(),
         relationship: Yup.string().required(),
-        about: Yup.string().required(),
-        location: Yup.object<Geolocation>().required()
+        about: Yup.string().required()
       })
-
       const data: AccountInterface = request.body;
       await schema.validate(data, {abortEarly: false})
 
+      const {name, surname, email, birthdate, genre, sex_orientation, relationship, about} = request.body;
+      const accountRepository = getRepository(Account);
+      if (!is18(new Date(birthdate))) {
+        let {code, body} = ResponseInterface.notAcceptable('only 18 years old.')
+        return response.status(code).json(body)
+      }
       const account = accountRepository.create({
         name,
         surname,
@@ -88,9 +106,11 @@ export default {
         sex_orientation,
         relationship,
         about,
-        photo: request.file.filename
-      })
-      await accountRepository.update({email: account.email},account);
+        photo: request.file?.filename || ''
+      });
+
+      await mongoManager.updateOne(Account, {email: account.email}, account);
+
       let {code, body} = ResponseInterface.success(account);
       return response.status(code).json(body);
     } catch (e) {
@@ -98,15 +118,17 @@ export default {
       return response.status(code).json(body);
     }
   },
-  async verify(request: Request, response: Response) {
+  async verifyActivation(request: Request, response: Response) {
     try {
+      const mongoManager = getMongoManager();
       const email = await JWT.getUser(request);
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOneOrFail({email})
+      const account = await mongoManager.findOne(Account,{email})
       if (account){
-        await accountRepository.update({email}, {active: true})
+        await mongoManager.updateOne(Account,{email}, {active: true})
         return response.sendFile(path.join(__dirname, '..', 'html', 'email-verified.html'))
       } else {
+        response.redirect(`${await getEnv()}`)
         return response.status(200).send('');
       }
     } catch (e) {
@@ -117,14 +139,15 @@ export default {
   },
   async recoveryPass(request: Request, response: Response) {
     try {
-      const data:AccountInterface = request.body;
+      const mongoManager = getMongoManager();
+      const {email} = request.body;
       const accountRepository = getRepository(Account);
-      const account = await accountRepository.findOneOrFail({email: data.email});
+      const account = await mongoManager.findOne(Account, {email});
       if (account) {
         let pass = Math.random().toString(36).slice(-10);
         account.password = JWT.hashSync(pass);
-        await sendRecoveryPass(account, pass);
-        await accountRepository.update({email: account.email}, {password: account.password});
+        await sendEmailRecoveryPass(account.email, pass);
+        await mongoManager.updateOne(Account, {email: account.email}, {password: account.password});
       }
       let {code, body} = ResponseInterface.success();
       return response.status(code).json(body);
@@ -171,7 +194,8 @@ export default {
       const accountRepository = getRepository(Account);
       const account = await accountRepository.findOne({email});
       if (!account) {
-        return response.send(ResponseInterface.unauthorized())
+        let {code, body} = ResponseInterface.unauthorized()
+        return response.status(code).json(body);
       }
       let valid = JWT.compareSync(password, account.password);
       if (valid) {
@@ -186,12 +210,12 @@ export default {
         let {email} = account
         let token = JWT.sign(email);
         account.last_login = new Date();
-        await accountRepository.update({email: account.email},account);
+        await accountRepository.update({email: account.email}, account);
         let {code, body} = ResponseInterface.success({auth: true, token})
         return response.status(code).json(body)
       } else {
         let {code, body} = ResponseInterface.unauthorized()
-        return response.status(code).json(body)
+        return response.status(code).json(body);
       }
     } catch (e) {
       let {code, body} = ResponseInterface.internalServerError();
@@ -282,10 +306,10 @@ async function waitActive(account:Account) {
   }
 }
 
-async function sendRecoveryPass(account:Account, pass:string) {
+async function sendEmailRecoveryPass(email: string, pass:string) {
   try {
     const data: EmailInterface = {
-      email: account.email,
+      email: email,
       subject: '[RECUPERAR SENHA]',
       body: RECOVERY_PASS_TEMPLATE.replace(/password/, pass)
     }
