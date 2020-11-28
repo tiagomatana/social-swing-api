@@ -1,5 +1,5 @@
 import JWT from "../security/JWT";
-import jwt from 'jsonwebtoken'
+import jwt from 'jsonwebtoken';
 
 describe('JWT Test Suite', () => {
 
@@ -16,8 +16,7 @@ describe('JWT Test Suite', () => {
     const user = jwt.verify(token, 'test') as {payload: string};
     expect(user.payload).toEqual(email)
     done()
-  })
-
+  });
 
 })
 

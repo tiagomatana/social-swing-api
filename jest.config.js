@@ -1,12 +1,12 @@
 const {pathsToModuleNameMapper} = require("ts-jest/utils");
 const {compilerOptions} = require("./tsconfig");
-
+//preset: @shelf/jest-mongodb
 module.exports = {
     preset: 'ts-jest',
     clearMocks: true,
+    verbose: true,
     testEnvironment: 'node',
     collectCoverage: false,
-    lib: ['@shelf/jest-mongodb'],
     collectCoverageFrom: [
         "./src/**/*.ts"
     ],

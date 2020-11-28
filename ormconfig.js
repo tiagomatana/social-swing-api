@@ -1,6 +1,6 @@
 module.exports = {
     type: 'mongodb',
-    url: process.env.DATABASE_URL,
+    url: process.env.DATABASE_URL || 'mongodb://userdev:qIEGvDD9Ha9zXjVQ@localhost/brasilswing?retryWrites=true&w=majority',
     useUnifiedTopology: true,
     useNewUrlParser: true,
     synchronize:true,
