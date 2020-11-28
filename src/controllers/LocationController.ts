@@ -57,61 +57,6 @@ export default {
             return response.status(code).json(body)
         }
 
-    },
-    async listByMiles(request: Request, response: Response) {
-        try {
-            const {miles} = request.params
-            const mongoManager = getMongoManager();
-            const email = await JWT.getUser(request);
-            const userLocation = await mongoManager.findOne(Location, {account_email: email})
-            if (!userLocation) {
-                return await this.listByCity(request, response);
-            }
-            const users = await mongoManager.aggregate(Location, [
-                {
-                    $match: {
-                        point: { $geoWithin:   { $centerSphere: [ userLocation?.point.coordinates, Number(miles) / 3963.2 ] } }, //111.12
-                        account_email: { $ne: userLocation?.account_email}
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'accounts',
-                        localField: 'account_email',
-                        foreignField: 'email',
-                        as: 'account'
-                    }
-                }
-            ]).toArray();
-
-            let {code, body} = ResponseInterface.success(users);
-            return response.status(code).json(body)
-        } catch (e) {
-            let {code, body} = ResponseInterface.internalServerError(e);
-            return response.status(code).json(body)
-        }
-    },
-    async listByCity(request: Request, response: Response) {
-        try {
-            const mongoManager = getMongoManager();
-            const email = await JWT.getUser(request);
-            const account = await AccountController.getLoggedUser(request)
-            const users = await mongoManager.aggregate(Account, [
-                {
-                    $match: {
-                        city: account?.city,
-                        uf: account?.uf,
-                        email: { $ne: email}
-                    }
-                }
-            ]).toArray();
-
-            let {code, body} = ResponseInterface.success(users);
-            return response.status(code).json(body)
-        } catch (e) {
-            let {code, body} = ResponseInterface.internalServerError(e);
-            return response.status(code).json(body)
-        }
     }
 
 

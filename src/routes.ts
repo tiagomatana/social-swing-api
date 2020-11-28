@@ -6,8 +6,8 @@ import uploadConfig from './config/upload';
 import JWT from "./security/JWT";
 import ImageController from "@controllers/ImageController";
 import LocationController from "@controllers/LocationController";
-import ResponseInterface from "./interfaces/ResponseInterface";
-import https from 'https'
+import ExternalController from "@controllers/ExternalController";
+import TimelineController from "@controllers/TimelineController";
 
 const prefix = '/api';
 const routes = Router();
@@ -31,55 +31,10 @@ routes.post(`${prefix}/gallery`, [JWT.verify, upload.array('images')], ImageCont
 routes.patch(`${prefix}/gallery`, [JWT.verify], ImageController.remove);
 
 routes.post(`${prefix}/locate`, JWT.verify, LocationController.save);
-// routes.get(`${prefix}/timeline`, JWT.verify, LocationController.list);
+routes.get(`${prefix}/timeline`, JWT.verify, TimelineController.list);
 
 
-routes.get(`${prefix}/states`, async function (request, response) {
-  const apiRequest = await https.get(new URL('https://servicodados.ibge.gov.br/api/v1/localidades/estados'), function (res) {
-    let str = ''
-    res.on('data', function (chunk) {
-      str += chunk
-    });
-
-    res.on('end', function () {
-      if (str) {
-        const result:any = JSON.parse(str);
-        // @ts-ignore
-        const states = result.map(({sigla, nome}) => {
-          return {sigla, nome}
-        })
-        return response.status(200).json(states);
-      }
-      let {code, body} = ResponseInterface.notFound(str)
-      return response.status(code).json(body)
-    });
-  })
-  apiRequest.end();
-});
-
-routes.get(`${prefix}/states/:UF`, async function (request, response) {
-  const {UF} = request.params;
-  const apiRequest = await https.get(new URL(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${UF}/distritos`), function (res) {
-    let str = ''
-    res.on('data', function (chunk) {
-      str += chunk
-    });
-
-    res.on('end', function () {
-
-      if (str){
-        const result:any = JSON.parse(str);
-        // @ts-ignore
-        const cities = result.map(({nome}) => {
-          return nome
-        })
-        return response.status(200).json(cities);
-      }
-      let {code, body} = ResponseInterface.notFound(str)
-      return response.status(code).json(body)
-    });
-  })
-  apiRequest.end()
-});
+routes.get(`${prefix}/states`, ExternalController.getStates);
+routes.get(`${prefix}/states/:UF`, ExternalController.getCities);
 
 export default routes;
