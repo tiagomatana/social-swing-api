@@ -1,5 +1,6 @@
 import {Column, Entity, Index, ObjectID, ObjectIdColumn} from "typeorm";
 import Image from "./Images";
+import Point from "@models/Point";
 
 @Entity('accounts')
 export default class Account {
@@ -15,6 +16,9 @@ export default class Account {
   @Index('email', { unique: true})
   @Column()
   email: string;
+
+  @Column(type => Point)
+  point: Point = new Point();
 
   @Column({type: "date"})
   birthdate: Date;
