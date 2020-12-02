@@ -1,4 +1,4 @@
-import {Column, Entity} from "typeorm";
+import {Column} from "typeorm";
 
 export default class Point {
 
@@ -6,6 +6,6 @@ export default class Point {
     type: string = 'Point';
 
     @Column({length: 2})
-    coordinates: Array<number>;
+    coordinates: Array<number> = [];
 
 }

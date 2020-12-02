@@ -1,19 +1,13 @@
 import {Request, Response} from 'express';
-import {getMongoManager, getRepository} from "typeorm";
+import {getMongoManager} from "typeorm";
 import Account from "../models/Account";
-import del from 'del';
-import path from 'path';
 import ResponseInterface from "../interfaces/ResponseInterface";
 import JWT from "../security/JWT";
-import Image from "@models/Images";
 import * as Yup from "yup";
-import AccountInterface from "../interfaces/AccountInterface";
-import Location from "@models/Location";
-import AccountController from "@controllers/AccountController";
 
 interface LocationInterface {
     city: string;
-    miles: number;
+    uf: string;
     latitude: number;
     longitude: number;
 }
@@ -24,6 +18,7 @@ export default {
             const mongoManager = getMongoManager();
 
             const email = await JWT.getUser(request);
+
             const data: LocationInterface = request.body;
 
             let schema;
@@ -39,17 +34,18 @@ export default {
             }
             await schema.validate(data, {abortEarly: false});
 
-            const locationRepository = getRepository(Location);
-            const point = locationRepository.create({
-                account_email: email,
+            const location = {
+                city: data.city || "",
+                uf: data.uf || "",
                 point: {
-                    coordinates: [data.latitude, data.longitude] || []
+                    type: 'Point',
+                    coordinates: data.latitude && data.longitude ? [ data.latitude, data.longitude ] : []
                 }
-            });
+            }
 
-            await mongoManager.updateOne(Location, {account_email: email}, point, {upsert: true});
+            await mongoManager.updateOne(Account, {email: email}, location);
 
-            let {code, body} = ResponseInterface.created(point);
+            let {code, body} = ResponseInterface.created(location);
 
             return response.status(code).json(body)
         } catch (e) {
