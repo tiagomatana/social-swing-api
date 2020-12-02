@@ -1,15 +1,9 @@
 import {Request, Response} from 'express';
-import {getMongoManager, getRepository} from "typeorm";
+import {getMongoManager} from "typeorm";
 import Account from "../models/Account";
-import del from 'del';
-import path from 'path';
 import ResponseInterface from "../interfaces/ResponseInterface";
 import JWT from "../security/JWT";
-import Image from "@models/Images";
 import * as Yup from "yup";
-import AccountInterface from "../interfaces/AccountInterface";
-import Location from "@models/Location";
-import AccountController from "@controllers/AccountController";
 
 interface LocationInterface {
     city: string;
