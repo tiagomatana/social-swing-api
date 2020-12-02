@@ -21,27 +21,26 @@ export default {
             let users = [];
             const account = await AccountController.getLoggedUser(request) as Account;
 
+            let match: any = {};
+            match.email = { $ne: account.email};
+            match.genre = genre ? genre : { $ne: null};
+            match.is_blocked = false;
+            match.active = false;
+
             if (miles && account.point) {
+                match.point = { $geoWithin:   { $centerSphere: [ account.point.coordinates, Number(miles) / 3963.2 ] } };//111.12
+
                 users = await mongoManager.aggregate(Account, [
                     {
-                        $match: {
-                            point: { $geoWithin:   { $centerSphere: [ account.point.coordinates, Number(miles) / 3963.2 ] } }, //111.12
-                            email: { $ne: account.email},
-                            genre: genre ? genre : { $ne: account?.genre}
-                        }
+                        $match: match
                     }
                 ]).toArray();
             } else {
+                match.uf = account.uf;
+                match.city = account.city;
                 users = await mongoManager.aggregate(Account, [
                     {
-                        $match: {
-                            city: account?.city,
-                            uf: account?.uf,
-                            email: { $ne: email},
-                            genre: genre ? genre : { $ne: account?.genre},
-                            is_blocked: false,
-                            active: false,
-                        }
+                        $match: match
                     }
                 ]).toArray();
             }
