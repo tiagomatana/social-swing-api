@@ -2,6 +2,7 @@ import {Request, Response} from "express";
 import https from "https";
 import ResponseInterface from "../interfaces/ResponseInterface";
 import {io} from '../server';
+import Logger from "../interfaces/Logger";
 
 interface ClientConnection {
     id: string;
@@ -22,8 +23,10 @@ class MessageNotification {
 
 
 const _clientsConnected: any = [];
-
+console.log(123)
 io.on('connection', (socket) => {
+    Logger.info(`Client connected`)
+
     socket.on('storeClientInfo', (data: ClientConnection) => {
         let clientInfo = {
             clientId: data.id,

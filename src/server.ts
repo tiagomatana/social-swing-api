@@ -8,6 +8,7 @@ import routes from "./routes";
 import listEndpoints from 'express-list-endpoints';
 import {Server} from 'socket.io';
 
+
 const io = new Server()
 
 
@@ -42,3 +43,5 @@ io.listen(server);
 export {io}
 export {server}
 export default app;
+
+import './controllers/NotificationController'
