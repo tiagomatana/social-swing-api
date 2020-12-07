@@ -6,6 +6,13 @@ import cors from 'cors';
 import errorHandler from "./errors/handler";
 import routes from "./routes";
 import listEndpoints from 'express-list-endpoints';
+import {Server} from 'socket.io';
+
+const io = new Server()
+
+
+
+
 const {PORT} = process.env;
 
 const app = express();
@@ -29,5 +36,9 @@ const server = app.listen(PORT || 3000, () => {
 
 });
 
+io.listen(server);
+
+
+export {io}
 export {server}
 export default app;
