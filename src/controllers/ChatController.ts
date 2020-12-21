@@ -48,6 +48,9 @@ export default {
                 const messages: Message[] = await mongoManager.aggregate(Message, [
                     {
                         $match: {from: String(userEmail), to: email}
+                    },
+                    {
+                        $match: {from: email, to: String(userEmail)}
                     }
                 ]).toArray();
 
