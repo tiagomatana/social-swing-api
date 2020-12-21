@@ -11,7 +11,7 @@ import {Server} from 'socket.io';
 
 const io = new Server()
 
-
+export const users: any[] = []; // Lista de usuários
 
 
 const {PORT} = process.env;
@@ -45,3 +45,4 @@ export {server}
 export default app;
 
 import './controllers/NotificationController'
+import '@controllers/SocketManager'

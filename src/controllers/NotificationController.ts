@@ -1,13 +1,5 @@
-import {Request, Response} from "express";
-import https from "https";
-import ResponseInterface from "../interfaces/ResponseInterface";
-import {io} from '../server';
+import {io, users} from '../server';
 import Logger from "../interfaces/Logger";
-
-interface ClientConnection {
-    id: string;
-    customId: string;
-}
 
 class MessageNotification {
     title: string;
@@ -22,49 +14,20 @@ class MessageNotification {
 }
 
 
-const _clientsConnected: any = [];
-console.log(123)
-io.on('connection', (socket) => {
-    Logger.info(`Client connected`)
-
-    socket.on('storeClientInfo', (data: ClientConnection) => {
-        let clientInfo = {
-            clientId: data.id,
-            customId: data.customId
-        }
-        _clientsConnected.push(clientInfo);
-    });
-
-    socket.on('disconnect', function () {
-        for( var i=0, len=_clientsConnected.length; i<len; ++i ){
-            var c = _clientsConnected[i];
-            if(c.clientId == socket.id){
-                _clientsConnected.splice(i,1);
-                break;
-            }
-        }
-    });
-
-    //TODO: implementar segurança
-    if (!socket.handshake.headers.origin) {
-        setTimeout(() => socket.disconnect(true), 5000);
-    } else {
-        console.log('Socket: client connected');
-    }
-
-})
-
 export default {
-    sendNotification(email: string, title: string, content: string, type: string) {
+    sendNotification(email: string, title: string, content: string, type: string = '') {
         try {
             const notify = new MessageNotification({title, content, type});
-            const destination = _clientsConnected.find( (client: ClientConnection) => {
-                return client.customId === email
-            });
-            io.to(destination).emit('notifications', notify);
-            return { destination, notify};
+
+            if (!email) {
+                io.emit('notifications', notify)
+            } else {
+                // @ts-ignore
+                users[email].emit('notifications', notify);
+            }
+
         } catch (e) {
-            return null
+            Logger.error('Error on notification');
         }
 
     }

@@ -34,6 +34,15 @@ export default {
       return null;
     }
   },
+  async getUserByToken(token: string) {
+    try {
+      let secret = process.env.SECRET as string;
+      const user:any = jwt.verify(token, secret);
+      return user.payload;
+    } catch (e) {
+      return null;
+    }
+  },
   getSecret() {
     let secret = process.env.SECRET as string;
     return secret;
