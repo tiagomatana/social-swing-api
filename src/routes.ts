@@ -8,6 +8,7 @@ import ImageController from "@controllers/ImageController";
 import LocationController from "@controllers/LocationController";
 import ExternalController from "@controllers/ExternalController";
 import TimelineController from "@controllers/TimelineController";
+import ChatController from "@controllers/ChatController";
 
 const prefix = '/api';
 const routes = Router();
@@ -32,6 +33,8 @@ routes.patch(`${prefix}/gallery`, [JWT.verify], ImageController.remove);
 
 routes.post(`${prefix}/locate`, JWT.verify, LocationController.save);
 routes.get(`${prefix}/timeline`, JWT.verify, TimelineController.list);
+
+routes.get(`${prefix}/chat/messages/:email`, JWT.verify, ChatController.getMessages);
 
 
 routes.get(`${prefix}/states`, ExternalController.getStates);
