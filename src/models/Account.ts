@@ -63,6 +63,12 @@ export default class Account {
   city: string = ''
 
   @Column()
+  favorites: string[] = [];
+
+  @Column()
+  friends: string[] = [];
+
+  @Column()
   created: Date = new Date()
 
 }
